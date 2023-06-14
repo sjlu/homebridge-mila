@@ -159,9 +159,8 @@ export class MilaPlatformAccessory {
    */
   async setSpeed (value: CharacteristicValue) {
     this.log.debug(`setSpeed ${value}`);
-    const speed = Math.round(value as number / 10) * 10;
-    await this.platform.milaClient.setRoomManualFanSpeed(this.getRoomId(), speed);
-    this.state.Speed = speed;
+    const { fanSpeed } = await this.platform.milaClient.setRoomManualFanSpeed(this.getRoomId(), speed);
+    this.state.Speed = fanSpeed;
     this.syncState();
   }
 
