@@ -1,7 +1,7 @@
-import { API, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig, Service, Characteristic } from 'homebridge'
-import { PLATFORM_NAME, PLUGIN_NAME } from './settings'
-import { MilaPlatformAccessory } from './platformAccessory'
-import MilaClient from './lib/mila-client'
+import { API, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig, Service, Characteristic } from 'homebridge';
+import { PLATFORM_NAME, PLUGIN_NAME } from './settings';
+import { MilaPlatformAccessory } from './platformAccessory';
+const MilaClient = require('../lib/mila-client');
 
 /**
  * HomebridgePlatform
@@ -9,17 +9,17 @@ import MilaClient from './lib/mila-client'
  * parse the user config and discover/register accessories with Homebridge.
  */
 export class MilaHomebridgePlatform implements DynamicPlatformPlugin {
-  public readonly Service: typeof Service = this.api.hap.Service
-  public readonly Characteristic: typeof Characteristic = this.api.hap.Characteristic
+  public readonly Service: typeof Service = this.api.hap.Service;
+  public readonly Characteristic: typeof Characteristic = this.api.hap.Characteristic;
 
   // this is used to track restored cached accessories
-  public readonly accessories: PlatformAccessory[] = []
+  public readonly accessories: PlatformAccessory[] = [];
 
   constructor (
     public readonly log: Logger,
     public readonly config: PlatformConfig,
     public readonly api: API,
-    private milaClient = new MilaClient(config.email, config.password),
+    public milaClient = new MilaClient(config.email, config.password),
   ) {
     // When this event is fired it means Homebridge has restored all cached accessories from disk.
     // Dynamic Platform plugins should only register new accessories after this event was fired,
@@ -28,10 +28,10 @@ export class MilaHomebridgePlatform implements DynamicPlatformPlugin {
     this.api.on('didFinishLaunching', () => {
       // log.debug('Executed didFinishLaunching callback')
       // run the method to discover / register your devices as accessories
-      this.discoverDevices()
+      this.discoverDevices();
       // if (!intervalID) intervalID = setInterval(() => this.caller.refreshAuthToken(), refreshInterval*60*1000)
-    })
-    this.log.debug('Finished initializing platform ', PLATFORM_NAME)
+    });
+    this.log.debug('Finished initializing platform ', PLATFORM_NAME);
   }
 
   /**
@@ -40,10 +40,10 @@ export class MilaHomebridgePlatform implements DynamicPlatformPlugin {
    */
 
   configureAccessory (accessory: PlatformAccessory) {
-    this.log.info('Loading accessory from cache:', accessory.displayName)
+    this.log.info('Loading accessory from cache:', accessory.displayName);
 
     // add the restored accessory to the accessories cache so we can track if it has already been registered
-    this.accessories.push(accessory)
+    this.accessories.push(accessory);
   }
 
   /**
@@ -52,23 +52,23 @@ export class MilaHomebridgePlatform implements DynamicPlatformPlugin {
    * must not be registered again to prevent "duplicate UUID" errors.
    */
   async discoverDevices () {
-    this.log.debug('Discover Devices Called')
-    const appliances = this.milaClient.getAppliances()
+    this.log.debug('Discover Devices Called');
+    const appliances = await this.milaClient.getAppliances();
     // loop over the discovered devices and register each one if it has not already been registered
-    appliances.forEach((device) => {
+    appliances.forEach((device : any) => {
       // generate a unique id for the accessory this should be generated from
       // something globally unique, but constant, for example, the device serial
       // number or MAC address
-      this.log.debug('found device from API: ' + JSON.stringify(device))
-      const uuid = this.api.hap.uuid.generate(device.id)
+      this.log.debug('found device from API: ' + JSON.stringify(device));
+      const uuid = this.api.hap.uuid.generate(device.id);
 
       // see if an accessory with the same uuid has already been registered and restored from
       // the cached devices we stored in the `configureAccessory` method above
-      const existingAccessory = this.accessories.find(accessory => accessory.UUID === uuid)
+      const existingAccessory = this.accessories.find(accessory => accessory.UUID === uuid);
 
       if (existingAccessory) {
         // the accessory already exists
-        this.log.info('Restoring existing accessory from cache:', existingAccessory.displayName)
+        this.log.info('Restoring existing accessory from cache:', existingAccessory.displayName);
 
         // if you need to update the accessory.context then you should run `api.updatePlatformAccessories`. eg.:
         // existingAccessory.context.device = device;
@@ -76,7 +76,7 @@ export class MilaHomebridgePlatform implements DynamicPlatformPlugin {
 
         // create the accessory handler for the restored accessory
         // this is imported from `platformAccessory.ts`
-        new MilaPlatformAccessory(this, existingAccessory, this.config, this.log)
+        new MilaPlatformAccessory(this, existingAccessory, this.config, this.log);
 
         // it is possible to remove platform accessories at any time using `api.unregisterPlatformAccessories`, eg.:
         // remove platform accessories when no longer present
@@ -84,23 +84,23 @@ export class MilaHomebridgePlatform implements DynamicPlatformPlugin {
         // this.log.info('Removing existing accessory from cache:', existingAccessory.displayName);
       } else {
         // the accessory does not yet exist, so we need to create it
-        this.log.info('Adding new accessory:', device.name)
+        this.log.info('Adding new accessory:', device.name);
 
         // create a new accessory
-        const accessory = new this.api.platformAccessory(device.name, uuid)
+        const accessory = new this.api.platformAccessory(device.name, uuid);
 
         // store a copy of the device object in the `accessory.context`
         // the `context` property can be used to store any data about the accessory you may need
-        accessory.context.device = device
+        accessory.context.device = device;
 
         // create the accessory handler for the newly create accessory
         // this is imported from `platformAccessory.ts`
-        new MilaPlatformAccessory(this, accessory, this.config, this.log)
+        new MilaPlatformAccessory(this, accessory, this.config, this.log);
 
         // link the accessory to your platform
-        this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory])
+        this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
       }
-    }
-    )
+    },
+    );
   }
 }

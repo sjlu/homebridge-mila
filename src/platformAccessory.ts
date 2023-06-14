@@ -1,5 +1,5 @@
-import { Service, PlatformAccessory, CharacteristicValue, Logger, PlatformConfig } from 'homebridge'
-import { MilaHomebridgePlatform } from './platform'
+import { Service, PlatformAccessory, CharacteristicValue, Logger, PlatformConfig } from 'homebridge';
+import { MilaHomebridgePlatform } from './platform';
 
 /**
  * Platform Accessory
@@ -7,54 +7,56 @@ import { MilaHomebridgePlatform } from './platform'
  * Each accessory may expose multiple services of different service types.
  */
 export class MilaPlatformAccessory {
-  private service: Service
+  private service: Service;
   /**
    * These are just used to create a working example
    * You should implement your own code to track the state of your accessory
    */
   private state = {
-    state: 0,
+    state: 0, // 0 = inactive, 1 = idle, 2 = Purifying Air
     Speed: 0,
-    Filter: 100,
-    On: 0
-  }
+    On: 0,
+  };
 
   constructor (
     private readonly platform: MilaHomebridgePlatform,
     private readonly accessory: PlatformAccessory,
     private readonly config: PlatformConfig,
-    private readonly log: Logger
+    private readonly log: Logger,
   ) {
     // set accessory information
     this.accessory.getService(this.platform.Service.AccessoryInformation)!
       .setCharacteristic(this.platform.Characteristic.Manufacturer, 'Mila')
       // .setCharacteristic(this.platform.Characteristic.Model, accessory.context.device.model)
-      .setCharacteristic(this.platform.Characteristic.SerialNumber, accessory.context.device.id)
-      // .setCharacteristic(this.platform.Characteristic.FirmwareRevision, accessory.context.device.firmwareVersion)
+      .setCharacteristic(this.platform.Characteristic.SerialNumber, accessory.context.device.id);
+    // .setCharacteristic(this.platform.Characteristic.FirmwareRevision, accessory.context.device.firmwareVersion)
 
     // get the AirPurifier service if it exists, otherwise create a new AirPurifier service
     // you can create multiple services for each accessory
-    this.service = this.accessory.getService(this.platform.Service.AirPurifier) || this.accessory.addService(this.platform.Service.AirPurifier)
+    this.service = this.accessory.getService(this.platform.Service.AirPurifier) ||
+      this.accessory.addService(this.platform.Service.AirPurifier);
     // set the service name, this is what is displayed as the default name on the Home app
     // in this example we are using the name we stored in the `accessory.context` in the `discoverDevices` method.
-    this.service.setCharacteristic(this.platform.Characteristic.Name, accessory.context.device.name)
+    this.service.setCharacteristic(this.platform.Characteristic.Name, accessory.context.device.name);
     // each service must implement at-minimum the "required characteristics" for the given service type
     // see https://developers.homebridge.io/#/service/AirPurifier
 
     // register handlers for the On/Off Characteristic
     this.service.getCharacteristic(this.platform.Characteristic.Active)
       .onSet(this.handleActiveSet.bind(this)) // SET - bind to the `handleActiveSet` method below
-      .onGet(this.handleActiveGet.bind(this)) // GET - bind to the `handleActiveGet` method below
+      .onGet(this.handleActiveGet.bind(this)); // GET - bind to the `handleActiveGet` method below
     // register handlers for the CurrentAirPurifierState Characteristic
     this.service.getCharacteristic(this.platform.Characteristic.CurrentAirPurifierState)
-      .onGet(this.getState.bind(this)) // GET - bind to the `getState` method below
+      .onGet(this.getState.bind(this)); // GET - bind to the `getState` method below
     // register handlers for the TargetAirPurifierState Characteristic
     this.service.getCharacteristic(this.platform.Characteristic.TargetAirPurifierState)
       .onSet(this.handleAutoSet.bind(this))
-      .onGet(this.handleAutoGet.bind(this))
+      .onGet(this.handleAutoGet.bind(this));
     this.service.getCharacteristic(this.platform.Characteristic.RotationSpeed)
       .onSet(this.setSpeed.bind(this))
-      .onGet(this.getSpeed.bind(this))
+      .onGet(this.getSpeed.bind(this));
+
+    this.syncAccessory(accessory.context.device);
 
     // this.service.getCharacteristic(this.platform.Characteristic.FilterChangeIndication)
     //   .onGet(this.getFilterChange.bind(this))
@@ -73,16 +75,45 @@ export class MilaPlatformAccessory {
      */
   }
 
+  getRoomId () {
+    return this.accessory.context.device.room.id;
+  }
+
+  syncState () {
+    this.log.debug('syncState', this.state);
+
+    this.service.updateCharacteristic(this.platform.Characteristic.CurrentAirPurifierState, this.state.state);
+    this.service.updateCharacteristic(this.platform.Characteristic.On, this.state.On);
+    this.service.updateCharacteristic(this.platform.Characteristic.RotationSpeed, this.state.Speed);
+  }
+
+  syncAccessory (device: any) {
+    this.log.debug('syncAccessory', device)
+
+    this.state.On = device.fanSpeed !== 0 ? 1 : 0;
+    this.state.state = this.state.On ? 2 : 0;
+    this.state.Speed = device.fanSpeed;
+
+    this.syncState();
+  }
+
+  async getAndSyncAccessory () {
+    const device = await this.platform.milaClient.getAppliance(this.accessory.context.device.id);
+    this.syncAccessory(device)
+  }
+
   /**
    * Handle "SET" requests from HomeKit
    * These are sent when the user changes the state of an accessory, for example, turning on a Light bulb.
    */
   async handleActiveSet (value: CharacteristicValue) {
-    // implement your own code to turn your device on/off
+    this.log.debug('handleActiveSet', value)
 
-    const roomId = this.accessory.context.device.room.id
-    await this.platform.setRoomManualFanSpeed(roomId, value ? this.state.Speed : 0)
-    this.state.On = value ? 1 : 0
+    // implement your own code to turn your device on/off
+    await this.platform.milaClient.setRoomManualFanSpeed(this.getRoomId(), value ? this.state.Speed : 0);
+    this.state.On = value ? 1 : 0;
+    this.state.state = this.state.On ? 2 : 0;
+    this.syncState()
   }
 
   /**
@@ -98,25 +129,28 @@ export class MilaPlatformAccessory {
    * this.service.updateCharacteristic(this.platform.Characteristic.On, true)
    */
   async handleActiveGet (): Promise<CharacteristicValue> {
-    // if (await this.updateStates() === 1) throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE)
-    // this.log.info(this.accessory.context.device.name+' state is: ' + this.state.On);
-    return (this.state.On)
+    await this.getAndSyncAccessory();
+    // if (await this.updateStates() === 1) {
+    //   throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE)
+    // }
+    this.log.info(this.accessory.context.device.name+' state is: ' + this.state.On);
+    return (this.state.On);
     // if you need to return an error to show the device as "Not Responding" in the Home app:
     // throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
   }
 
   async getState (): Promise<CharacteristicValue> {
-    return this.state.state
+    return this.state.state;
   }
 
   async handleAutoSet (value:CharacteristicValue) {
     //TODO figure this out: "/users/me/devices/{serialNumber}/actions/enable-smart-mode"
-    this.log.debug('Homekit attempted to set auto/manual ('+value+') state but it is not yet implemented ☹')
-    this.service.updateCharacteristic(this.platform.Characteristic.TargetAirPurifierState, 0)
+    this.log.debug('Homekit attempted to set auto/manual ('+value+') state but it is not yet implemented ☹');
+    this.service.updateCharacteristic(this.platform.Characteristic.TargetAirPurifierState, 0);
   }
 
   async handleAutoGet () {
-    return 0
+    return 0;
   }
 
   /**
@@ -124,11 +158,15 @@ export class MilaPlatformAccessory {
    * These are sent when the user changes the state of an accessory, for example, changing the speed
    */
   async setSpeed (value: CharacteristicValue) {
-    console.log(value)
+    this.log.debug(`setSpeed ${value}`);
+    const speed = Math.round(value as number / 10) * 10;
+    await this.platform.milaClient.setRoomManualFanSpeed(this.getRoomId(), speed);
+    this.state.Speed = speed;
+    this.syncState();
   }
 
   async getSpeed ():Promise<CharacteristicValue> {
-    return this.state.Speed
+    return this.state.Speed;
   }
 
   // async getFilterChange (): Promise<CharacteristicValue> {
@@ -140,8 +178,4 @@ export class MilaPlatformAccessory {
   //   this.log.debug('Check Filter State: ' + this.state.Filter)
   //   return this.state.Filter
   // }
-
-  async updateStates () {
-    return 0
-  }
 }
