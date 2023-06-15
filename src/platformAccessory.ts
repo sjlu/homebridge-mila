@@ -202,8 +202,11 @@ export class MilaPlatformAccessory {
   async handleActiveSet (value: CharacteristicValue) {
     this.log.info(`handleActiveSet ${value}`)
 
-    // implement your own code to turn your device on/off
-    await this.platform.milaClient.setRoomManualFanSpeed(this.getRoomId(), value ? this.state.Speed : 0);
+    // only change if we're turning off or going from Off to On otherwise this
+    // gets called with fan speed being set causing a race-condition
+    if (!value || (!this.state.On && value)) {
+      await this.platform.milaClient.setRoomManualFanSpeed(this.getRoomId(), value ? this.state.Speed : 0);
+    }
     this.state.On = value ? 1 : 0;
     this.state.state = this.state.On ? 2 : 0;
     this.syncState()
@@ -237,8 +240,7 @@ export class MilaPlatformAccessory {
   }
 
   async handleAutoSet (value: CharacteristicValue) {
-    this.log.info(`handleAutoSet ${value}`)
-    // not yet implemented
+    this.log.info(`handleAutoSet ${value} (not yet implemented) `)
     this.airPurifierService.updateCharacteristic(this.platform.Characteristic.TargetAirPurifierState, 0);
   }
 
