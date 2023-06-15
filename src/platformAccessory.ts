@@ -18,7 +18,8 @@ export class MilaPlatformAccessory {
    * You should implement your own code to track the state of your accessory
    */
   private state = {
-    state: 0, // 0 = inactive, 1 = idle, 2 = Purifying Air
+    state: 0, // 0 = inactive, 1 = idle, 2 = Purifying Air,
+    Mode: 0, // 0 = manual, 1 = auto
     Speed: 0,
     On: 0,
     AirQuality: 0,
@@ -199,7 +200,7 @@ export class MilaPlatformAccessory {
    * These are sent when the user changes the state of an accessory, for example, turning on a Light bulb.
    */
   async handleActiveSet (value: CharacteristicValue) {
-    this.log.debug('handleActiveSet', value)
+    this.log.info(`handleActiveSet ${value}`)
 
     // implement your own code to turn your device on/off
     await this.platform.milaClient.setRoomManualFanSpeed(this.getRoomId(), value ? this.state.Speed : 0);
@@ -225,7 +226,7 @@ export class MilaPlatformAccessory {
     // if (await this.updateStates() === 1) {
     //   throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE)
     // }
-    this.log.info(this.accessory.context.device.name+' state is: ' + this.state.On);
+    this.log.info(`${this.accessory.context.device.name} state is: ${this.state.On}`);
     return this.state.On;
     // if you need to return an error to show the device as "Not Responding" in the Home app:
     // throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
@@ -235,9 +236,9 @@ export class MilaPlatformAccessory {
     return this.state.state;
   }
 
-  async handleAutoSet (value:CharacteristicValue) {
-    //TODO figure this out: "/users/me/devices/{serialNumber}/actions/enable-smart-mode"
-    this.log.debug('Homekit attempted to set auto/manual ('+value+') state but it is not yet implemented ☹');
+  async handleAutoSet (value: CharacteristicValue) {
+    this.log.info(`handleAutoSet ${value}`)
+    // not yet implemented
     this.airPurifierService.updateCharacteristic(this.platform.Characteristic.TargetAirPurifierState, 0);
   }
 
@@ -250,9 +251,11 @@ export class MilaPlatformAccessory {
    * These are sent when the user changes the state of an accessory, for example, changing the speed
    */
   async setSpeed (value: CharacteristicValue) {
-    this.log.debug(`setSpeed ${value}`);
+    this.log.info(`setSpeed ${value}`)
+
     const { fanSpeed } = await this.platform.milaClient.setRoomManualFanSpeed(this.getRoomId(), value as number);
     this.state.Speed = fanSpeed;
+
     this.syncState();
   }
 
