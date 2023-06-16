@@ -145,6 +145,7 @@ export class MilaPlatformAccessory {
   syncState () {
     this.log.debug('syncState', this.state);
 
+    this.airPurifierService.updateCharacteristic(this.platform.Characteristic.TargetAirPurifierState, this.state.Mode);
     this.airPurifierService.updateCharacteristic(this.platform.Characteristic.CurrentAirPurifierState, this.state.state);
     this.airPurifierService.updateCharacteristic(this.platform.Characteristic.On, this.state.On);
     this.airPurifierService.updateCharacteristic(this.platform.Characteristic.RotationSpeed, this.state.Speed);
@@ -240,12 +241,23 @@ export class MilaPlatformAccessory {
   }
 
   async handleAutoSet (value: CharacteristicValue) {
-    this.log.info(`handleAutoSet ${value} (not yet implemented) `)
-    this.airPurifierService.updateCharacteristic(this.platform.Characteristic.TargetAirPurifierState, 0);
+    this.log.info(`handleAutoSet ${value}`)
+
+    if (value) {
+      await this.platform.milaClient.setAutomagicMode(this.getRoomId())
+    } else {
+      await this.platform.milaClient.setRoomManualFanSpeed(this.getRoomId(), this.state.Speed)
+    }
+
+    this.state.Mode = value ? 1 : 0
+
+    this.syncState();
+
+    // this.airPurifierService.updateCharacteristic(this.platform.Characteristic.TargetAirPurifierState, 0);
   }
 
   async handleAutoGet () {
-    return 0;
+    return this.state.Mode;
   }
 
   /**
