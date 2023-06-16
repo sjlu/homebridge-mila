@@ -23,6 +23,18 @@
         "type": "string",
         "placeholder": "********",
         "required": true
+      },
+      "co2_threshold": {
+        "title": "CO2 Threshold",
+        "description": "Mila considers 1000 to be abnormal but you may need to set this higher. Set this to a high number to disable Homekit notifications.",
+        "type": "number",
+        "default": 1000
+      },
+      "co_threshold": {
+        "title": "CO Threshold",
+        "description": "Mila does not consider their carbon monoxide detector to be accurate and needs calibration. Set this to a high number to disable Homekit notifications.",
+        "type": "number",
+        "default": 100
       }
     }
   }

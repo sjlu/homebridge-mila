@@ -183,9 +183,9 @@ export class MilaPlatformAccessory {
     this.state.Humidity = Math.round(device.sensors.Humidity);
     this.state.Temperature = Math.round(device.sensors.Temperature * 10) / 10;
     this.state.CO2 = Math.round(device.sensors.Co2);
-    this.state.CO2State = this.state.CO2 > 1000 ? 1 : 0; // Mila considers 1000+ to be abnormal
+    this.state.CO2State = this.state.CO2 > (this.config.co2_threshold || 1000) ? 1 : 0; // Mila considers 1000+ to be abnormal
     this.state.CO = Math.round(device.sensors.Co);
-    this.state.COState = this.state.CO > 100 ? 1 : 0; // Mila doesn't publish numbers but 100 seems to be the abnormal number
+    this.state.COState = this.state.CO > (this.config.co_threshold || 100) ? 1 : 0; // Mila doesn't publish numbers but 100 seems to be the abnormal number
 
     this.syncState();
   }
