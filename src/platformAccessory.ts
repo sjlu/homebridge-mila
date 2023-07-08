@@ -180,7 +180,7 @@ export class MilaPlatformAccessory {
     if (device.fanSpeed < 0 || device.fanSpeed > 100) {
       this.log.info(`Fan speed is ${device.fanSpeed}% at RPM ${device.sensors.FanSpeed}`)
     }
-    this.state.Speed = device.fanSpeed > 0 device.fanSpeed : 0;
+    this.state.Speed = device.fanSpeed > 0 ? device.fanSpeed : 0;
 
     this.state.AirQuality = this.getAirQuality(device.sensors.Aqi);
     this.state.PM10 = Math.round(device.sensors.Pm10);
