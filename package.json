@@ -1,6 +1,6 @@
 {
   "name": "homebridge-mila",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "description": "Homebridge plugin for Mila Air Purifier",
   "main": "dist/index.js",
   "scripts": {
