@@ -178,7 +178,7 @@ export class MilaPlatformAccessory {
     this.state.state = this.state.On ? 2 : 0;
 
     if (device.fanSpeed < 0 || device.fanSpeed > 100) {
-      this.log.info(`Fan speed is ${device.fanSpeed}% at RPM ${device.sensors.FanSpeed}`)
+      this.log.debug(`Fan speed is ${device.fanSpeed}% at RPM ${device.sensors.FanSpeed}`)
     }
     this.state.Speed = device.fanSpeed > 0 ? device.fanSpeed : 0;
 
@@ -206,7 +206,7 @@ export class MilaPlatformAccessory {
    * These are sent when the user changes the state of an accessory, for example, turning on a Light bulb.
    */
   async handleActiveSet (value: CharacteristicValue) {
-    this.log.info(`handleActiveSet ${value}`)
+    this.log.debug(`handleActiveSet ${value}`)
 
     // only change if we're turning off or going from Off to On otherwise this
     // gets called with fan speed being set causing a race-condition
@@ -235,7 +235,7 @@ export class MilaPlatformAccessory {
     // if (await this.updateStates() === 1) {
     //   throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE)
     // }
-    this.log.info(`${this.accessory.context.device.name} state is: ${this.state.On}`);
+    this.log.debug(`${this.accessory.context.device.name} state is: ${this.state.On}`);
     return this.state.On;
     // if you need to return an error to show the device as "Not Responding" in the Home app:
     // throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
@@ -246,7 +246,7 @@ export class MilaPlatformAccessory {
   }
 
   async handleAutoSet (value: CharacteristicValue) {
-    this.log.info(`handleAutoSet ${value}`)
+    this.log.debug(`handleAutoSet ${value}`)
 
     if (value) {
       await this.platform.milaClient.setAutomagicMode(this.getRoomId())
@@ -270,7 +270,7 @@ export class MilaPlatformAccessory {
    * These are sent when the user changes the state of an accessory, for example, changing the speed
    */
   async setSpeed (value: CharacteristicValue) {
-    this.log.info(`setSpeed ${value}`)
+    this.log.debug(`setSpeed ${value}`)
 
     const { fanSpeed } = await this.platform.milaClient.setRoomManualFanSpeed(this.getRoomId(), value as number);
     this.state.Speed = fanSpeed;
